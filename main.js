@@ -1,4 +1,3 @@
-let iter = 0;
 const frametime = 16;
 
 function flush(data) {
@@ -56,37 +55,113 @@ function init() {
 	})
 }
 
-function greenWave() {
+function redWave() {
 	return new Promise(function(resolve) {
 		let counter = 0;
 
+		const gimmeSin = function(i, offs) { return (Math.sin(i + offs) + 1) / 2 }
+
 		let interval = setInterval(function() {
-			flush([
-				0,
-				Math.sin(counter) + 1,
-				0,
-				Math.sin(counter) + 1,
-				0,
-				Math.sin(counter) + 1,
-				0,
-				Math.sin(counter) + 1,
-			])
+		  counter += 0.05;
 
-			counter += 0.01;
+		  flush([
+			gimmeSin(counter, 0),
+			0,
+			gimmeSin(counter, Math.PI / 2),
+			0,
+			gimmeSin(counter, Math.PI),
+			0,
+			gimmeSin(counter, Math.PI * 1.5),
+			0,
+		  ])
 
-			// if(counter >= 10) {
-			// 	clearInterval(interval)
+		  if(counter >= Math.PI * 2) {
+		  	clearInterval(interval)
 
-			// 	resolve()
-			// }
-		}, frametime);
+		  	resolve()
+		  }
+		}, frametime)
 	})
 }
 
-// init()
-// 	.then(greenWave);
+function redGreenOrangePulse() {
+	return new Promise(function(resolve) {
+		let counter = 0;
+		let iter = 0;
 
-greenWave()
+		const gimmeColour = function(c, i, offs) {
+			// Red
+			if(i % 3 === 0) {
+				return [
+					(Math.sin(c + offs) + 1) / 2,
+					0,
+				]
+			}
+			// Green
+			else if((i + 1) % 3 === 0) {
+				return [
+					0,
+					(Math.sin(c + offs) + 1) / 2,
+				]
+			}
+			// Orange
+			else {
+				return [
+					(Math.sin(c + offs) + 1) / 2,
+					(Math.sin(c + offs) + 1) / 2,
+				]
+			}
+
+			return (Math.sin(c + offs) + 1) / 2
+		}
+
+		const baseOffset = Math.PI * 1.5
+
+		let interval = setInterval(function() {
+		  counter += 0.05;
+
+		  flush(
+			gimmeColour(counter, iter, baseOffset)
+			.concat(
+				gimmeColour(counter, iter, baseOffset),
+				gimmeColour(counter, iter, baseOffset),
+				gimmeColour(counter, iter, baseOffset)
+			)
+		  )
+
+		  if(counter >= Math.PI * 2) {
+		  	counter = 0;
+		  	iter++;
+		  }
+
+		  if(iter >= 3) {
+		  	clearInterval(interval)
+
+		  	resolve()
+		  }
+		}, frametime)
+	})
+}
+
+function loopN(num, func) {
+	return func()
+		.then(function() {
+			if(num > 1) {
+				return loopN(num - 1, func)
+			}
+
+			return null
+		})
+}
+
+function patterns() {
+	return loopN(10, redWave)
+		.then(redGreenOrangePulse)
+		.then(patterns)
+	;
+}
+
+init().then(patterns)
 
 setInterval(function() {
 

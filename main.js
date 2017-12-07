@@ -13,19 +13,31 @@ function flush(data) {
 	analogWrite(B15, data[7], { freq : 1000 });
 }
 
-function testPattern(counter) {
-	d = [
-		Math.sin(counter) + 1,
-		Math.cos(counter) + 1,
-		Math.sin(counter) + 1,
-		Math.cos(counter) + 1,
-		Math.sin(counter) + 1,
-		Math.cos(counter) + 1,
-		Math.sin(counter) + 1,
-		Math.cos(counter) + 1
-	]
+function testPattern() {
+	return new Promise(function(resolve) {
+		let counter = 0;
 
-	flush(d)
+		let interval = setInterval(function() {
+		  counter += 0.05;
+
+		  flush([
+			Math.sin(counter) + 1,
+			Math.cos(counter) + 1,
+			Math.sin(counter) + 1,
+			Math.cos(counter) + 1,
+			Math.sin(counter) + 1,
+			Math.cos(counter) + 1,
+			Math.sin(counter) + 1,
+			Math.cos(counter) + 1
+		  ])
+
+		  if(counter >= Math.PI * 2) {
+		  	clearInterval(interval)
+
+		  	resolve()
+		  }
+		}, frametime)
+	})
 }
 
 function init() {
@@ -83,6 +95,36 @@ function redWave() {
 		}, frametime)
 	})
 }
+
+function greenWave() {
+	return new Promise(function(resolve) {
+		let counter = 0;
+
+		const gimmeSin = function(i, offs) { return (Math.sin(i + offs) + 1) / 2 }
+
+		let interval = setInterval(function() {
+		  counter += 0.05;
+
+		  flush([
+			0,
+			gimmeSin(counter, 0),
+			0,
+			gimmeSin(counter, Math.PI / 2),
+			0,
+			gimmeSin(counter, Math.PI),
+			0,
+			gimmeSin(counter, Math.PI * 1.5),
+		  ])
+
+		  if(counter >= Math.PI * 2) {
+		  	clearInterval(interval)
+
+		  	resolve()
+		  }
+		}, frametime)
+	})
+}
+
 
 function redGreenOrangePulse() {
 	return new Promise(function(resolve) {
@@ -150,19 +192,23 @@ function loopN(num, func) {
 				return loopN(num - 1, func)
 			}
 
-			return null
+			return Promise.resolve()
 		})
 }
 
 function patterns() {
-	return loopN(10, redWave)
-		.then(loopN(5, redGreenOrangePulse))
+	return loopN(1, redWave)
+		.then(function() {
+			return loopN(5, redGreenOrangePulse)
+		})
+		.then(function() {
+			return loopN(10, greenWave)
+		})
+		.then(function() {
+			return loopN(10, testPattern)
+		})
 		.then(patterns)
 	;
 }
 
 init().then(patterns)
-
-setInterval(function() {
-
-}, frametime)

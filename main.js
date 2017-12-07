@@ -156,7 +156,7 @@ function loopN(num, func) {
 
 function patterns() {
 	return loopN(10, redWave)
-		.then(redGreenOrangePulse)
+		.then(loopN(5, redGreenOrangePulse))
 		.then(patterns)
 	;
 }

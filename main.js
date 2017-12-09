@@ -1,16 +1,15 @@
 const frametime = 16;
+const freq = 5000;
 
 function flush(data) {
-	const freq = 1000;
-
-	analogWrite(A5, data[0], { freq : 1000 });
-	analogWrite(A6, data[1], { freq : 1000 });
-	analogWrite(A7, data[2], { freq : 1000 });
-	analogWrite(B1, data[3], { freq : 1000 });
-	analogWrite(B10, data[4], { freq : 1000 });
-	analogWrite(B13, data[5], { freq : 1000 });
-	analogWrite(B14, data[6], { freq : 1000 });
-	analogWrite(B15, data[7], { freq : 1000 });
+	analogWrite(A5, data[0], { freq: freq });
+	analogWrite(A6, data[1], { freq: freq });
+	analogWrite(A7, data[2], { freq: freq });
+	analogWrite(B1, data[3], { freq: freq });
+	analogWrite(B10, data[4], { freq: freq });
+	analogWrite(B13, data[5], { freq: freq });
+	analogWrite(B14, data[6], { freq: freq });
+	analogWrite(B15, data[7], { freq: freq });
 }
 
 function testPattern() {
@@ -197,7 +196,7 @@ function loopN(num, func) {
 }
 
 function patterns() {
-	return loopN(1, redWave)
+	return loopN(10, redWave)
 		.then(function() {
 			return loopN(5, redGreenOrangePulse)
 		})

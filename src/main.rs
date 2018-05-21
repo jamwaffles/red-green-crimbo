@@ -16,13 +16,13 @@ use core::f32::consts::PI;
 use cortex_m_rtfm_macros::app;
 use cos::cos_normalised;
 use hal::prelude::*;
-use hal::pwm::{C4, Pwm};
+use hal::pwm::{C1, C2, C3, C4, Pwm};
 use hal::stm32f103xx::TIM4;
 use hal::timer::{Event, Timer};
 use rtfm::Threshold;
 use sin::sin_normalised;
 
-type PwmResource = Pwm<TIM4, C4>;
+type PwmResource = (Pwm<TIM4, C1>, Pwm<TIM4, C2>, Pwm<TIM4, C3>, Pwm<TIM4, C4>);
 
 // Tasks and resources
 app! {
@@ -57,20 +57,20 @@ fn init(p: init::Peripherals) -> init::LateResources {
     let c3 = gpiob.pb8.into_alternate_push_pull(&mut gpiob.crh);
     let c4 = gpiob.pb9.into_alternate_push_pull(&mut gpiob.crh);
 
-    let mut pwm = p.device
-        .TIM4
-        .pwm(
-            (c1, c2, c3, c4),
-            &mut afio.mapr,
-            1.khz(),
-            clocks,
-            &mut rcc.apb1,
-        )
-        .3;
+    let mut pwm = p.device.TIM4.pwm(
+        (c1, c2, c3, c4),
+        &mut afio.mapr,
+        1.khz(),
+        clocks,
+        &mut rcc.apb1,
+    );
 
-    let max = pwm.get_max_duty();
+    let max = pwm.0.get_max_duty();
 
-    pwm.enable();
+    pwm.0.enable();
+    pwm.1.enable();
+    pwm.2.enable();
+    pwm.3.enable();
 
     init::LateResources {
         PWMOUT: pwm,
@@ -88,9 +88,18 @@ fn idle() -> ! {
 fn tick(_t: &mut Threshold, mut r: SYS_TICK::Resources) {
     let ms: u32 = *r.MS;
 
-    let sin = sin_normalised(ms);
-
-    r.PWMOUT.set_duty((*r.MAX_DUTY as f32 * sin) as u16);
+    r.PWMOUT
+        .0
+        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.0)) as u16);
+    r.PWMOUT
+        .1
+        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.25)) as u16);
+    r.PWMOUT
+        .2
+        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.5)) as u16);
+    r.PWMOUT
+        .3
+        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.75)) as u16);
 
     *r.MS += 1;
 }

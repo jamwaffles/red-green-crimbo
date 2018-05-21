@@ -1,14 +1,31 @@
 [package]
-authors = ["James Waples <jamwaffles@gmail.com>"]
 name = "red-green-crimbo"
 version = "0.1.0"
+authors = ["James Waples <jamwaffles@gmail.com>"]
+publish = false
 
 [dependencies]
-cortex-m = "0.5.2"
-cortex-m-rt = "0.5.1"
-panic-semihosting = "0.2.0"
+cortex-m = "0.4.3"
+cortex-m-rt = "0.4.0"
+cortex-m-rtfm = "0.3.2"
+cortex-m-rtfm-macros = "0.3.1"
+embedded-hal = "0.1.2"
+ssd1306 = "0.1.0"
+panic-abort = "0.1.1"
+embedded-graphics = "0.1.1"
 
 [dependencies.stm32f103xx-hal]
 git = "https://github.com/japaric/stm32f103xx-hal.git"
-rev = "a25fb6276a81b51528761fa44d42df89cf6034e0"
+rev = "330c904473dc3a34ef2864166dcbe658992d652a"
+features = ["rt"]
 version = "*"
+# disable both incremental compilation and parallel codegen to reduce the chances of running into
+# rust-lang/rust#47074
+[profile.dev]
+codegen-units = 1
+incremental = false
+
+[profile.release]
+debug = true
+lto = true
+opt-level = "s"

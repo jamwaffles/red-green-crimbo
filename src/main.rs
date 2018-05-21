@@ -9,11 +9,18 @@ extern crate cortex_m_rtfm_macros;
 extern crate panic_abort;
 extern crate stm32f103xx_hal as hal;
 
+mod cos;
+mod sin;
+
+use core::f32::consts::PI;
 use cortex_m_rtfm_macros::app;
+use cos::cos_normalised;
 use hal::prelude::*;
 use hal::pwm::{C4, Pwm};
 use hal::stm32f103xx::TIM4;
+use hal::timer::{Event, Timer};
 use rtfm::Threshold;
+use sin::sin_normalised;
 
 type PwmResource = Pwm<TIM4, C4>;
 
@@ -23,12 +30,14 @@ app! {
 
     resources: {
         static PWMOUT: PwmResource;
+        static MS: u32;
+        static MAX_DUTY: u16;
     },
 
     tasks: {
         SYS_TICK: {
             path: tick,
-            resources: [PWMOUT],
+            resources: [PWMOUT, MS, MAX_DUTY],
         },
     }
 }
@@ -39,6 +48,8 @@ fn init(p: init::Peripherals) -> init::LateResources {
     let clocks = rcc.cfgr.freeze(&mut flash.acr);
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
+
+    Timer::syst(p.core.SYST, 1.khz(), clocks).listen(Event::Update);
 
     // TIM4
     let c1 = gpiob.pb6.into_alternate_push_pull(&mut gpiob.crl);
@@ -61,10 +72,11 @@ fn init(p: init::Peripherals) -> init::LateResources {
 
     pwm.enable();
 
-    // full
-    pwm.set_duty(max);
-
-    init::LateResources { PWMOUT: pwm }
+    init::LateResources {
+        PWMOUT: pwm,
+        MS: 0,
+        MAX_DUTY: max,
+    }
 }
 
 fn idle() -> ! {
@@ -73,6 +85,12 @@ fn idle() -> ! {
     }
 }
 
-fn tick(_t: &mut Threshold, mut _r: SYS_TICK::Resources) {
-    // ...
+fn tick(_t: &mut Threshold, mut r: SYS_TICK::Resources) {
+    let ms: u32 = *r.MS;
+
+    let sin = sin_normalised(ms);
+
+    r.PWMOUT.set_duty((*r.MAX_DUTY as f32 * sin) as u16);
+
+    *r.MS += 1;
 }

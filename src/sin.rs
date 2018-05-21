@@ -52,6 +52,8 @@ pub const SIN: &[u8] = &[
 ];
 
 #[inline(always)]
-pub fn sin_normalised(val: u32) -> f32 {
-    SIN[(val & 0b11_1111_1111) as usize] as f32 / 255.0
+pub fn sin_normalised(val: u32, offset: f32) -> f32 {
+    let idx = (val + (offset * 1023f32) as u32) as u32 % 1024;
+
+    SIN[idx as usize] as f32 / 255.0
 }

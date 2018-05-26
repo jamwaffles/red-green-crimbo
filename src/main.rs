@@ -17,19 +17,21 @@ use cortex_m_rtfm_macros::app;
 use cos::cos_normalised;
 use hal::prelude::*;
 use hal::pwm::{C1, C2, C3, C4, Pwm};
-use hal::stm32f103xx::TIM4;
+use hal::stm32f103xx::{TIM2, TIM3, TIM4};
 use hal::timer::{Event, Timer};
 use rtfm::Threshold;
 use sin::sin_normalised;
 
-type PwmResource = (Pwm<TIM4, C1>, Pwm<TIM4, C2>, Pwm<TIM4, C3>, Pwm<TIM4, C4>);
+type Timer2Resource = (Pwm<TIM2, C1>, Pwm<TIM2, C2>, Pwm<TIM2, C3>, Pwm<TIM2, C4>);
+type Timer3Resource = (Pwm<TIM3, C1>, Pwm<TIM3, C2>, Pwm<TIM3, C3>, Pwm<TIM3, C4>);
 
 // Tasks and resources
 app! {
     device: hal::stm32f103xx,
 
     resources: {
-        static PWMOUT: PwmResource;
+        static PWM_1: Timer3Resource;
+        static PWM_2: Timer2Resource;
         static MS: u32;
         static MAX_DUTY: u16;
     },
@@ -37,7 +39,7 @@ app! {
     tasks: {
         SYS_TICK: {
             path: tick,
-            resources: [PWMOUT, MS, MAX_DUTY],
+            resources: [PWM_1, PWM_2, MS, MAX_DUTY],
         },
     }
 }
@@ -48,32 +50,59 @@ fn init(p: init::Peripherals) -> init::LateResources {
     let clocks = rcc.cfgr.freeze(&mut flash.acr);
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
+    let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
 
     Timer::syst(p.core.SYST, 1.khz(), clocks).listen(Event::Update);
 
-    // TIM4
-    let c1 = gpiob.pb6.into_alternate_push_pull(&mut gpiob.crl);
-    let c2 = gpiob.pb7.into_alternate_push_pull(&mut gpiob.crl);
-    let c3 = gpiob.pb8.into_alternate_push_pull(&mut gpiob.crh);
-    let c4 = gpiob.pb9.into_alternate_push_pull(&mut gpiob.crh);
+    // TIM2
+    let t2c1 = gpioa.pa0.into_alternate_push_pull(&mut gpioa.crl);
+    let t2c2 = gpioa.pa1.into_alternate_push_pull(&mut gpioa.crl);
+    let t2c3 = gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl);
+    let t2c4 = gpioa.pa3.into_alternate_push_pull(&mut gpioa.crl);
 
-    let mut pwm = p.device.TIM4.pwm(
-        (c1, c2, c3, c4),
+    // TIM3
+    let t3c1 = gpioa.pa6.into_alternate_push_pull(&mut gpioa.crl);
+    let t3c2 = gpioa.pa7.into_alternate_push_pull(&mut gpioa.crl);
+    let t3c3 = gpiob.pb0.into_alternate_push_pull(&mut gpiob.crl);
+    let t3c4 = gpiob.pb1.into_alternate_push_pull(&mut gpiob.crl);
+
+    // TIM4
+    // let c1 = gpiob.pb6.into_alternate_push_pull(&mut gpiob.crl);
+    // let c2 = gpiob.pb7.into_alternate_push_pull(&mut gpiob.crl);
+    // let c3 = gpiob.pb8.into_alternate_push_pull(&mut gpiob.crh);
+    // let c4 = gpiob.pb9.into_alternate_push_pull(&mut gpiob.crh);
+
+    let mut t2pwm = p.device.TIM2.pwm(
+        (t2c1, t2c2, t2c3, t2c4),
         &mut afio.mapr,
         1.khz(),
         clocks,
         &mut rcc.apb1,
     );
 
-    let max = pwm.0.get_max_duty();
+    let mut t3pwm = p.device.TIM3.pwm(
+        (t3c1, t3c2, t3c3, t3c4),
+        &mut afio.mapr,
+        1.khz(),
+        clocks,
+        &mut rcc.apb1,
+    );
 
-    pwm.0.enable();
-    pwm.1.enable();
-    pwm.2.enable();
-    pwm.3.enable();
+    let max = t2pwm.0.get_max_duty();
+
+    t2pwm.0.enable();
+    t2pwm.1.enable();
+    t2pwm.2.enable();
+    t2pwm.3.enable();
+
+    t3pwm.0.enable();
+    t3pwm.1.enable();
+    t3pwm.2.enable();
+    t3pwm.3.enable();
 
     init::LateResources {
-        PWMOUT: pwm,
+        PWM_1: t3pwm,
+        PWM_2: t2pwm,
         MS: 0,
         MAX_DUTY: max,
     }
@@ -88,16 +117,29 @@ fn idle() -> ! {
 fn tick(_t: &mut Threshold, mut r: SYS_TICK::Resources) {
     let ms: u32 = *r.MS;
 
-    r.PWMOUT
+    r.PWM_1
         .0
         .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.0)) as u16);
-    r.PWMOUT
+    r.PWM_1
         .1
         .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.25)) as u16);
-    r.PWMOUT
+    r.PWM_1
         .2
         .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.5)) as u16);
-    r.PWMOUT
+    r.PWM_1
+        .3
+        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.75)) as u16);
+
+    r.PWM_2
+        .0
+        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.0)) as u16);
+    r.PWM_2
+        .1
+        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.25)) as u16);
+    r.PWM_2
+        .2
+        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.5)) as u16);
+    r.PWM_2
         .3
         .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.75)) as u16);
 

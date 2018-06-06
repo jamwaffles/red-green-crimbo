@@ -137,13 +137,15 @@ fn idle() -> ! {
 fn tick(_t: &mut Threshold, mut r: SYS_TICK::Resources) {
     let ms: u32 = *r.MS;
 
-    if *r.LOOP_COUNTER > ITERATIONS_PER_PATTERN {
+    // 1024 magic number is the sine table lookup length, i.e. one pattern "iteration"
+    if *r.LOOP_COUNTER > (ITERATIONS_PER_PATTERN * 1024) {
         *r.LOOP_COUNTER = 0;
         *r.PATTERN_INDEX += 1;
     }
 
     match *r.PATTERN_INDEX {
         0 => patterns::red_wave(*r.MAX_DUTY, ms, &mut *r.PWM),
+        1 => patterns::green_wave(*r.MAX_DUTY, ms, &mut *r.PWM),
         _ => {
             *r.PATTERN_INDEX = 0;
         }

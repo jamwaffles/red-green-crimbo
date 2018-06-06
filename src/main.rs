@@ -10,6 +10,7 @@ extern crate panic_abort;
 extern crate stm32f103xx_hal as hal;
 
 mod cos;
+mod patterns;
 mod sin;
 
 use core::f32::consts::PI;
@@ -33,6 +34,8 @@ pub struct PwmOutputs {
     g4: Pwm<TIM3, C4>,
 }
 
+const ITERATIONS_PER_PATTERN: u32 = 5;
+
 // Tasks and resources
 app! {
     device: hal::stm32f103xx,
@@ -41,17 +44,19 @@ app! {
         static PWM: PwmOutputs;
         static MS: u32;
         static MAX_DUTY: u16;
+        static LOOP_COUNTER: u32 = 0;
+        static PATTERN_INDEX: u8 = 0;
     },
 
     tasks: {
         SYS_TICK: {
             path: tick,
-            resources: [PWM, MS, MAX_DUTY],
+            resources: [PWM, MS, MAX_DUTY, LOOP_COUNTER, PATTERN_INDEX],
         },
     }
 }
 
-fn init(p: init::Peripherals) -> init::LateResources {
+fn init(p: init::Peripherals, _r: init::Resources) -> init::LateResources {
     let mut flash = p.device.FLASH.constrain();
     let mut rcc = p.device.RCC.constrain();
     let clocks = rcc.cfgr.freeze(&mut flash.acr);
@@ -132,31 +137,18 @@ fn idle() -> ! {
 fn tick(_t: &mut Threshold, mut r: SYS_TICK::Resources) {
     let ms: u32 = *r.MS;
 
-    r.PWM
-        .r1
-        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.0)) as u16);
-    r.PWM
-        .r2
-        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.25)) as u16);
-    r.PWM
-        .r3
-        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.5)) as u16);
-    r.PWM
-        .r4
-        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.75)) as u16);
+    if *r.LOOP_COUNTER > ITERATIONS_PER_PATTERN {
+        *r.LOOP_COUNTER = 0;
+        *r.PATTERN_INDEX += 1;
+    }
 
-    // r.PWM
-    //     .g1
-    //     .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.0)) as u16);
-    // r.PWM
-    //     .g2
-    //     .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.25)) as u16);
-    // r.PWM
-    //     .g3
-    //     .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.5)) as u16);
-    // r.PWM
-    //     .g4
-    //     .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.75)) as u16);
+    match *r.PATTERN_INDEX {
+        0 => patterns::red_wave(*r.MAX_DUTY, ms, &mut *r.PWM),
+        _ => {
+            *r.PATTERN_INDEX = 0;
+        }
+    }
 
     *r.MS += 1;
+    *r.LOOP_COUNTER += 1;
 }

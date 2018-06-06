@@ -22,19 +22,16 @@ use hal::timer::{Event, Timer};
 use rtfm::Threshold;
 use sin::sin_normalised;
 
-// type Timer2Resource = (Pwm<TIM2, C1>, Pwm<TIM2, C2>, Pwm<TIM2, C3>, Pwm<TIM2, C4>);
-// type Timer3Resource = (Pwm<TIM3, C1>, Pwm<TIM3, C2>, Pwm<TIM3, C3>, Pwm<TIM3, C4>);
-
-type PwmOutputs = (
-    Pwm<TIM2, C1>,
-    Pwm<TIM2, C2>,
-    Pwm<TIM2, C3>,
-    Pwm<TIM2, C4>,
-    Pwm<TIM3, C1>,
-    Pwm<TIM3, C2>,
-    Pwm<TIM3, C3>,
-    Pwm<TIM3, C4>,
-);
+pub struct PwmOutputs {
+    r1: Pwm<TIM2, C1>,
+    g1: Pwm<TIM2, C2>,
+    r2: Pwm<TIM2, C3>,
+    g2: Pwm<TIM2, C4>,
+    r3: Pwm<TIM3, C1>,
+    g3: Pwm<TIM3, C2>,
+    r4: Pwm<TIM3, C3>,
+    g4: Pwm<TIM3, C4>,
+}
 
 // Tasks and resources
 app! {
@@ -111,9 +108,16 @@ fn init(p: init::Peripherals) -> init::LateResources {
     t3pwm.3.enable();
 
     init::LateResources {
-        PWM: (
-            t2pwm.0, t2pwm.1, t2pwm.2, t2pwm.3, t3pwm.0, t3pwm.1, t3pwm.2, t3pwm.3,
-        ),
+        PWM: PwmOutputs {
+            r1: t2pwm.0,
+            g1: t2pwm.1,
+            r2: t2pwm.2,
+            g2: t2pwm.3,
+            r3: t3pwm.0,
+            g3: t3pwm.1,
+            r4: t3pwm.2,
+            g4: t3pwm.3,
+        },
         MS: 0,
         MAX_DUTY: max,
     }
@@ -129,30 +133,30 @@ fn tick(_t: &mut Threshold, mut r: SYS_TICK::Resources) {
     let ms: u32 = *r.MS;
 
     r.PWM
-        .0
+        .r1
         .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.0)) as u16);
     r.PWM
-        .1
+        .r2
         .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.25)) as u16);
     r.PWM
-        .2
+        .r3
         .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.5)) as u16);
     r.PWM
-        .3
+        .r4
         .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.75)) as u16);
 
-    r.PWM
-        .4
-        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.0)) as u16);
-    r.PWM
-        .5
-        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.25)) as u16);
-    r.PWM
-        .6
-        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.5)) as u16);
-    r.PWM
-        .7
-        .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.75)) as u16);
+    // r.PWM
+    //     .g1
+    //     .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.0)) as u16);
+    // r.PWM
+    //     .g2
+    //     .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.25)) as u16);
+    // r.PWM
+    //     .g3
+    //     .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.5)) as u16);
+    // r.PWM
+    //     .g4
+    //     .set_duty((*r.MAX_DUTY as f32 * sin_normalised(ms, 0.75)) as u16);
 
     *r.MS += 1;
 }

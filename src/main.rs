@@ -34,7 +34,7 @@ pub struct PwmOutputs {
     g4: Pwm<TIM3, C4>,
 }
 
-const ITERATIONS_PER_PATTERN: u32 = 5;
+pub const ITERATIONS_PER_PATTERN: u32 = 5;
 
 // Tasks and resources
 app! {
@@ -64,7 +64,7 @@ fn init(p: init::Peripherals, _r: init::Resources) -> init::LateResources {
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
 
-    Timer::syst(p.core.SYST, 1.khz(), clocks).listen(Event::Update);
+    Timer::syst(p.core.SYST, 1000.hz(), clocks).listen(Event::Update);
 
     // TIM2
     let t2c1 = gpioa.pa0.into_alternate_push_pull(&mut gpioa.crl);
@@ -146,7 +146,9 @@ fn tick(_t: &mut Threshold, mut r: SYS_TICK::Resources) {
 
     match *r.PATTERN_INDEX {
         0 => patterns::red_wave(*r.MAX_DUTY, ms, &mut *r.PWM),
-        1 => patterns::green_wave(*r.MAX_DUTY, ms, &mut *r.PWM),
+        1 => patterns::red_to_green_wave(*r.MAX_DUTY, ms, &mut *r.PWM),
+        2 => patterns::green_wave(*r.MAX_DUTY, ms, &mut *r.PWM),
+        3 => patterns::green_to_red_wave(*r.MAX_DUTY, ms, &mut *r.PWM),
         _ => {
             *r.PATTERN_INDEX = 0;
         }

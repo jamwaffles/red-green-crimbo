@@ -51,6 +51,8 @@ pub const SIN: &[u8] = &[
     116, 117, 118, 118, 119, 120, 121, 122, 122, 123, 124, 125, 125, 126,
 ];
 
+pub const SINE_TABLE_LEN: u32 = 1024;
+
 #[inline(always)]
 pub fn sin_normalised(val: u32, offset: f32) -> f32 {
     let idx = (val + (offset * 1023f32) as u32) as u32 % 1024;

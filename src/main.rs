@@ -141,6 +141,7 @@ fn tick(_t: &mut Threshold, mut r: SYS_TICK::Resources) {
     if *r.LOOP_COUNTER > (ITERATIONS_PER_PATTERN * 1024) {
         *r.LOOP_COUNTER = 0;
         *r.PATTERN_INDEX += 1;
+        *r.MS = 0;
     }
 
     match *r.PATTERN_INDEX {
